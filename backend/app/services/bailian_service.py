@@ -184,7 +184,7 @@ class BailianService:
                             # We check those in Step 3/Manual Helper separately or assume they are extracted elsewhere.
                             # But if they are inside this json_data (because parse_source_text was the container), grab them.
                             if not rag_res: rag_res = json_data.get('rag_result')
-                            if not web_res: web_res = json_data.get('web_result')
+                            if not web_res: web_res = json_data.get('web_result') or json_data.get('web_resul')
                             
                             if llm_result:
                                 full_text = llm_result
@@ -306,6 +306,8 @@ class BailianService:
                             rag_res = extract_balanced_json(parse_source_text, "rag_result")
                         if not web_res:
                             web_res = extract_balanced_json(parse_source_text, "web_result")
+                        if not web_res:
+                            web_res = extract_balanced_json(parse_source_text, "web_resul")
 
                     # Manual Delta Calculation
                     delta_text = full_text[last_text_len:]

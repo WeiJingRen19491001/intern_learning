@@ -105,7 +105,7 @@ async def ask_question(request: ChatRequest):
                         session_id=request.session_id,
                         user_query=request.question,
                         ai_response=full_response_text,
-                        sources=sources,
+                        # sources=sources, # Removed, using metadata_info property
                         metadata_info={
                             "usage": usage,
                             "latency": latency,
