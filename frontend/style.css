@@ -491,3 +491,54 @@ button#send-btn:disabled {
     50% { opacity: 1; }
     100% { opacity: 0.6; }
 }
+
+/* Sources Styling - Unified for History and Chat */
+.meta-sources {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px dashed #eee;
+    animation: fadeIn 0.5s ease;
+}
+
+.meta-sources strong {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9em;
+    color: #555;
+}
+
+.meta-sources ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.meta-sources li {
+    margin-bottom: 6px;
+    line-height: 1.5;
+}
+
+.source-link, .history-source-link {
+    color: #2196f3;
+    text-decoration: none;
+    font-size: 0.9em;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: color 0.2s;
+    cursor: pointer;
+}
+
+.source-link:before, .history-source-link:before {
+    content: '📄'; /* Default Doc Icon */
+    font-size: 1.1em;
+}
+
+.source-link[data-type="web"]:before, .history-source-link[data-type="web"]:before {
+    content: '🌐'; /* Web Icon */
+}
+
+.source-link:hover, .history-source-link:hover {
+    text-decoration: underline;
+    color: #1565c0;
+}

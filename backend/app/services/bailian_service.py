@@ -254,6 +254,14 @@ class BailianService:
                         
                         # Check start char
                         start_char = text[start_idx]
+                        
+                        # Fix: Skip whitespace/newlines to find real start char
+                        while start_idx < len(text) and text[start_idx].isspace():
+                            start_idx += 1
+                        
+                        if start_idx >= len(text): return None
+                        start_char = text[start_idx]
+
                         if start_char not in ['{', '[']:
                              # Maybe it's null or string or number. For rag/web result we expect obj or list.
                              return None
@@ -306,8 +314,14 @@ class BailianService:
                             rag_res = extract_balanced_json(parse_source_text, "rag_result")
                         if not web_res:
                             web_res = extract_balanced_json(parse_source_text, "web_result")
-                        if not web_res:
-                            web_res = extract_balanced_json(parse_source_text, "web_resul")
+                        
+                        # Fix for potential truncated key or newline value
+                        # If web_result extraction fails or is empty, try web_resul
+                        # But also check if it returned valid data, not just non-null
+                        if not web_res or (isinstance(web_res, list) and not web_res):
+                            web_res_candidate = extract_balanced_json(parse_source_text, "web_resul")
+                            if web_res_candidate:
+                                web_res = web_res_candidate
 
                     # Manual Delta Calculation
                     delta_text = full_text[last_text_len:]
@@ -348,10 +362,47 @@ class BailianService:
                     # Heuristic: If raw_output_text looks like a JSON object starting with {, prefer manual extraction logic.
                     is_workflow_json_stream = raw_output_text.strip().startswith('{') and '"llm_result"' in raw_output_text
                     
-                    if not rag_res and not is_workflow_json_stream:
+                    # 1. First, rely on what we extracted manually
+                    # (rag_res, web_res are already populated if found)
+                    
+                    # 2. Fallback: If not found manually, Try Accessing Object directly
+                    # This is CRITICAL if manual parsing failed (e.g. malformed JSON tail) but SDK managed to parse it
+                    if not rag_res:
                         rag_res = safe_get(response.output, 'rag_result')
-                    if not web_res and not is_workflow_json_stream:
+                    
+                    if not web_res:
                         web_res = safe_get(response.output, 'web_result')
+                    
+                    # 3. Fallback: Last Resort Pattern Match for Web Result at End of Stream
+                    # If we still have no web_res, and we are in a workflow stream, try to grab the tail
+                    if not web_res and is_workflow_json_stream and parse_source_text:
+                         import re
+                         # Look for "web_result" or "web_resul" followed by anything until end
+                         # This handles cases like: ... "web_resul": [{"title" ... }] }
+                         # or even malformed ... "web_resul": [{"title" ... 
+                         
+                         tail_match = re.search(r'"web_resul(?:t)?":\s*(\[.*)', parse_source_text, re.DOTALL)
+                         if tail_match:
+                             potential_json = tail_match.group(1).strip()
+                             # Try to fix closing brackets if missing
+                             if potential_json.startswith('['):
+                                 # Try parsing as is
+                                 try:
+                                     web_res = json.loads(potential_json)
+                                 except:
+                                     # Try removing trailing brace if it exists and disrupts (e.g. key: [..]} -> [..])
+                                     if potential_json.endswith('}'):
+                                         try:
+                                             web_res = json.loads(potential_json[:-1])
+                                         except:
+                                             pass
+                                     # Try adding ']'
+                                     if not web_res:
+                                         try:
+                                             web_res = json.loads(potential_json + ']')
+                                         except:
+                                             pass
+
 
                     # === SOURCES BUFFERING LOGIC ===
                     # User request: "Separate these two, append reference sources AFTER real stream output"
@@ -375,6 +426,7 @@ class BailianService:
                                     else:
                                         s_item["title"] = '知识库文档'
                                         s_item["url"] = '#'
+                                    s_item["type"] = "rag"
                                     sources_list.append(s_item)
                         elif isinstance(rag_res, list):
                             for item in rag_res:
@@ -382,22 +434,34 @@ class BailianService:
                                     s_item = item.copy()
                                     s_item["title"] = item.get('title') or item.get('doc_name') or '知识库文档'
                                     s_item["url"] = item.get('url') or item.get('docUrl') or item.get('doc_id') or '#'
+                                    s_item["type"] = "rag"
                                     sources_list.append(s_item)
                         elif isinstance(rag_res, dict):
                              s_item = rag_res.copy()
                              s_item["title"] = rag_res.get('title') or rag_res.get('documentName') or '知识库文档'
                              s_item["url"] = rag_res.get('docUrl') or rag_res.get('url') or '#'
+                             s_item["type"] = "rag"
                              sources_list.append(s_item)
 
                     # C. Workflow: "web_result" (Search)
                     if web_res:
                          if not isinstance(web_res, list): web_res = [web_res]
                          for item in web_res:
+                             s_item = {}
                              if isinstance(item, dict):
                                  s_item = item.copy()
                                  s_item["title"] = item.get('title') or '网络搜索结果'
-                                 s_item["url"] = item.get('link') or item.get('url') or '#'
-                                 sources_list.append(s_item)
+                                 s_item["link"] = item.get('link') or item.get('url') or '#'
+                             else:
+                                 # Handle string/other primitives (e.g. raw URL)
+                                 s_item = {"raw": item}
+                                 s_item["title"] = '网络搜索结果'
+                                 s_item["link"] = str(item) if item else '#'
+                             
+                             # Unify URL field
+                             s_item["url"] = s_item.get("link", "#")
+                             s_item["type"] = "web"
+                             sources_list.append(s_item)
 
                     # KEY CHANGE: Do not assign to 'sources' variable for immediate yield unless finished
                     # But we also need to pass rag_res/web_res to router for DB only at the end?

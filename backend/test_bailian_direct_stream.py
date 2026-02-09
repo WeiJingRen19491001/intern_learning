@@ -12,7 +12,7 @@ from app.core.config import settings
 dashscope.api_key = settings.DASHSCOPE_API_KEY
 
 def test_bailian_direct_stream():
-    query = "南京今天的天气" # 使用您出问题的同一个 Query
+    query = "我上一个问题是什么" # 使用您出问题的同一个 Query
     print(f"Testing Bailian App Direct Stream")
     print(f"App ID: {settings.BAILIAN_APP_ID}")
     print(f"Query: {query}")

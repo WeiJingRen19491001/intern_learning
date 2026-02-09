@@ -151,11 +151,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let sourcesHtml = '';
         if (sources && sources.length > 0) {
-            sourcesHtml = '<div class="meta-sources" style="margin-top:10px;"><strong>参考来源:</strong><ul>';
+            sourcesHtml = '<div class="meta-sources"><strong>参考来源:</strong><ul>';
             sources.forEach((source, index) => {
                 const label = source.title || source.url || 'Document';
-                // Using formatted link for modal
-                sourcesHtml += `<li><a href="#" class="history-source-link" data-idx="${index}">${escapeHtml(label)}</a></li>`;
+                const type = source.type || 'rag';
+                // Unified source-link class and structure
+                sourcesHtml += `<li><a href="#" class="history-source-link" data-idx="${index}" data-type="${type}">${escapeHtml(label)}</a></li>`;
             });
             sourcesHtml += '</ul></div>';
         } else {
@@ -311,7 +312,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                             // Handle Sources
                             if (data.sources && Array.isArray(data.sources)) {
-                                accumulatedSources = data.sources;
+                                // Merge logic: append new distinct sources instead of overwriting
+                                data.sources.forEach(newSource => {
+                                    // Deduplicate based on URL and Title to avoid duplicates if backend sends overlapping chunks
+                                    const exists = accumulatedSources.some(s => 
+                                        (s.url === newSource.url && s.title === newSource.title)
+                                    );
+                                    if (!exists) {
+                                        accumulatedSources.push(newSource);
+                                    }
+                                });
                                 updateMeta(metaContainer, accumulatedSources, finalUsage, finalLatency);
                             }
 
@@ -338,6 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateMeta(container, sources, usage, latency) {
+        // Only hide if absolutely no data
         if ((!sources || sources.length === 0) && !usage && !latency) {
             container.style.display = 'none';
             return;
@@ -346,25 +357,19 @@ document.addEventListener('DOMContentLoaded', () => {
         container.style.display = 'block';
         let html = '';
 
-        // Sources
+        // Sources Rendering (Matching History Detail Style)
         if (sources && sources.length > 0) {
             html += '<div class="meta-sources"><strong>参考来源:</strong><ul>';
             sources.forEach((source, index) => {
-                // Ensure text is safe
-                // Display Title, but OnClick show JSON
                 const label = source.title || source.url || 'Document';
-                // Using data-index to retrieve the full object later
-                html += `<li><a href="#" class="source-link" data-index="${index}">${escapeHtml(label)}</a></li>`;
+                const type = source.type || 'rag';
+                // Use data-type for icon selection in CSS
+                html += `<li><a href="#" class="source-link" data-index="${index}" data-type="${type}">${escapeHtml(label)}</a></li>`;
             });
             html += '</ul></div>';
-            
-            // Re-attach event listeners after innerHTML update
-            // We need to wait for the DOM to update.
-            // A simple way is to use setTimeout(0) or just attach immediately if synchronous.
-            // However, since we replace innerHTML, we must do it on the container's parent or re-query.
         }
 
-        // Stats
+        // Stats Rendering
         if (usage || latency) {
             let parts = [];
             if (latency) {
@@ -379,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 parts.push(`📊 ${total} tokens (In:${input}/Out:${output})`);
             }
             if (parts.length > 0) {
-                html += `<div class="meta-stats" style="margin-top:6px; font-size:0.85em; opacity:0.8; color:#666; border-top:1px dashed #eee; padding-top:4px;">
+                html += `<div class="meta-stats" style="margin-top:10px; font-size:0.85em; opacity:0.8; color:#666; border-top:1px dashed #eee; padding-top:4px;">
                     ${parts.join(' &nbsp;|&nbsp; ')}
                 </div>`;
             }
