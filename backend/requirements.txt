@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+asyncpg
+pydantic
+pydantic-settings
+python-dotenv
+httpx
+loguru
+dashscope
+psycopg2-binary

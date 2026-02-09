@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能客服 Agent</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- 引入 Marked.js 用于 Markdown 渲染 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- 引入 Highlight.js 用于代码高亮 (可选) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- View 1: Chat Interface -->
+        <div id="view-chat" class="view-container">
+            <header>
+                <div class="logo-title">
+                    <div class="logo-text-main" style="font-size: 20px; color: #4698ea;">LUMICLASS</div>
+                    <div class="logo-text-sub" style="font-size: 24px;">路觅智能客服</div>
+                </div>
+                <button id="to-history-btn">🕒 历史记录</button>
+            </header>
+            
+            <main class="chat-container">
+                <!-- 动态聊天流容器 -->
+                <div id="chat-stream-container"></div>
+                
+                <div class="input-area">
+                    <textarea id="user-input" placeholder="请输入您的问题... (Ctrl+Enter 发送)"></textarea>
+                    <button id="send-btn">
+                        <span class="btn-text">发送</span>
+                        <span class="loading-spinner" style="display:none;">...</span>
+                    </button>
+                </div>
+            </main>
+        </div>
+
+        <!-- View 2: History Interface -->
+        <div id="view-history" class="view-container" style="display:none;">
+            <header>
+                <button id="back-to-chat-btn">← 返回对话</button>
+                <h1>历史对话记录</h1>
+                <div style="width: 80px;"></div> <!-- Spacer for centering -->
+            </header>
+            <main class="history-container">
+                <div id="history-list-view">
+                     <ul id="history-list">
+                    <!-- JS Fill -->
+                    </ul>
+                </div>
+                <!-- Detail view container -->
+                <div id="history-detail-view" style="display:none; padding: 20px; max-width: 900px; margin: 0 auto;"></div>
+            </main>
+        </div>
+    </div>
+    <div id="modal-container"></div>
+    <script src="script.js"></script>
+</body>
+</html>
